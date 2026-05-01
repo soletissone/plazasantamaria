@@ -11,7 +11,6 @@
   :root {
     --green: #1D9E75; --green-light: #E1F5EE;
     --red: #D85A30; --red-light: #FAECE7;
-    --amber: #BA7517; --amber-light: #FAEEDA;
     --blue: #185FA5;
     --gray-50: #F7F6F2; --gray-100: #EDECE7;
     --gray-300: #B4B2A9; --gray-700: #444441; --gray-900: #1C1C1A;
@@ -25,10 +24,10 @@
   .badge-live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
-  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
   .metric-card { background: var(--white); border-radius: var(--radius); padding: 1.25rem; border: 1px solid var(--gray-100); }
   .metric-card .label { font-size: 12px; color: var(--gray-300); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-  .metric-card .value { font-family: 'DM Serif Display', serif; font-size: 32px; font-weight: 400; line-height: 1; }
+  .metric-card .value { font-family: 'DM Serif Display', serif; font-size: 36px; font-weight: 400; line-height: 1; }
   .metric-card .pct { font-size: 13px; margin-top: 4px; }
   .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
   .card { background: var(--white); border-radius: var(--radius); padding: 1.25rem; border: 1px solid var(--gray-100); }
@@ -48,7 +47,7 @@
   footer a { color: var(--blue); text-decoration: none; }
   #last-update { font-size: 12px; color: var(--gray-300); margin-top: 4px; }
   .error-box { background: var(--red-light); color: var(--red); border-radius: var(--radius-sm); padding: 1rem; font-size: 13px; margin-bottom: 1rem; display: none; line-height: 1.5; }
-  @media (max-width: 500px) { header { padding: 1rem; } main { padding: 1rem; } .metric-card .value { font-size: 26px; } }
+  @media (max-width: 500px) { header { padding: 1rem; } main { padding: 1rem; } .metric-card .value { font-size: 28px; } }
 </style>
 </head>
 <body>
@@ -82,19 +81,14 @@
       <p class="value" id="m-contra" style="color:var(--red)">—</p>
       <p class="pct" id="m-contra-pct" style="color:var(--red)"></p>
     </div>
-    <div class="metric-card">
-      <p class="label">Necesita más info</p>
-      <p class="value" id="m-info" style="color:var(--amber)">—</p>
-      <p class="pct" id="m-info-pct" style="color:var(--amber)"></p>
-    </div>
   </div>
 
   <div class="charts-grid">
     <div class="card">
       <p class="card-title">Resultado general</p>
       <div class="legend" id="legend-pie"></div>
-      <div style="position:relative; height:200px;">
-        <canvas id="pieChart" role="img" aria-label="Gráfico de torta con resultados de la votación"></canvas>
+      <div style="position:relative; height:220px;">
+        <canvas id="pieChart" role="img" aria-label="Gráfico de torta con resultados a favor y en contra"></canvas>
       </div>
     </div>
     <div class="card">
@@ -156,19 +150,13 @@ async function loadData() {
     if (rows.length) {
       renderAll(rows);
       document.getElementById('error-box').style.display = 'none';
-    } else {
-      showZero();
     }
     document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
   } catch(e) {
     document.getElementById('error-box').style.display = 'block';
-    document.getElementById('error-box').innerHTML = 'No se pudieron cargar los datos. Asegurate de que la planilla esté publicada en la web como CSV.<br><small>' + e.message + '</small>';
+    document.getElementById('error-box').innerHTML = 'No se pudieron cargar los datos.<br><small>' + e.message + '</small>';
     document.getElementById('last-update').textContent = 'Error al cargar';
   }
-}
-
-function showZero() {
-  ['m-total','m-favor','m-contra','m-info'].forEach(id => document.getElementById(id).textContent = '0');
 }
 
 function renderAll(rows) {
@@ -178,7 +166,7 @@ function renderAll(rows) {
   const motivoCol = headers.find(h => /motivo|raz[oó]n/i.test(h));
   const comentCol = headers.find(h => /coment|observ/i.test(h));
 
-  const counts = { favor: 0, contra: 0, info: 0 };
+  const counts = { favor: 0, contra: 0 };
   const porCalle = {};
   const motivos = {};
   const comentarios = [];
@@ -187,7 +175,6 @@ function renderAll(rows) {
     const v = (r[votoCol] || '').toLowerCase();
     if (/s[íi]\b|^s[íi]|favor|de acuerdo/.test(v)) counts.favor++;
     else if (/\bno\b|^no$|contra|desacuerdo/.test(v)) counts.contra++;
-    else if (/inform|m[aá]s info|necesit/.test(v)) counts.info++;
 
     const calle = (r[calleCol] || '').trim();
     if (calle.length > 1) porCalle[calle] = (porCalle[calle] || 0) + 1;
@@ -201,16 +188,14 @@ function renderAll(rows) {
     if (comentCol && r[comentCol] && r[comentCol].length > 3) comentarios.push(r[comentCol]);
   });
 
-  const total = counts.favor + counts.contra + counts.info;
+  const total = counts.favor + counts.contra;
   const pct = n => total ? Math.round(n / total * 100) : 0;
 
   document.getElementById('m-total').textContent = total;
   document.getElementById('m-favor').textContent = counts.favor;
   document.getElementById('m-contra').textContent = counts.contra;
-  document.getElementById('m-info').textContent = counts.info;
   document.getElementById('m-favor-pct').textContent = pct(counts.favor) + '% del total';
   document.getElementById('m-contra-pct').textContent = pct(counts.contra) + '% del total';
-  document.getElementById('m-info-pct').textContent = pct(counts.info) + '% del total';
 
   renderPie(counts, pct);
   renderBarList(porCalle);
@@ -219,18 +204,20 @@ function renderAll(rows) {
 }
 
 function renderPie(counts, pct) {
-  const labels = ['A favor', 'En contra', 'Necesita info'];
-  const data = [counts.favor, counts.contra, counts.info];
-  const colors = ['#1D9E75', '#D85A30', '#BA7517'];
+  const labels = ['A favor', 'En contra'];
+  const data = [counts.favor, counts.contra];
+  const colors = ['#1D9E75', '#D85A30'];
+
   document.getElementById('legend-pie').innerHTML = labels.map((l, i) =>
     `<span><span class="legend-dot" style="background:${colors[i]}"></span>${l} · ${pct(data[i])}%</span>`
   ).join('');
+
   if (pieInst) pieInst.destroy();
   pieInst = new Chart(document.getElementById('pieChart'), {
     type: 'doughnut',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 3, borderColor: '#ffffff', hoverOffset: 6 }] },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} votos (${pct(ctx.raw)}%)` } }
